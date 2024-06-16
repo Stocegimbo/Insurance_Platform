@@ -194,101 +194,76 @@ sui client publish --gas-budget 100000000 --json
 
 ## Structs
 
-### SurplusPost
+### Policy
 
 ```
-struct SurplusPost has key, store {
-  id: UID,
-  donor: address,
-  donorName: vector<u8>,
-  foodType: vector<u8>,
-  quantity: u64,
-  bestBefore: u64,
-  handlingInstructions: vector<u8>,
-  receiver: Option<address>,
-  driver: Option<address>,
-  created_at: u64,
-  dispute: bool,
-  delivered: bool,
-  paid: bool,
+struct Policy has key, store {
+    id: UID,
+    owner: address,
+    premium: u64,
+    coverage: u64,
+    conditions: vector<u8>,
+    is_active: bool,
 }
 
 ```
 
-### DonorProfile
+### Claim
 
 ```
-struct DonorProfile has key, store {
+struct Claim has key, store {
     id: UID,
-    donor: address,
-    donorName: vector<u8>,
-    donorType: vector<u8>,
+    policy_id: u64,
+    claimant: address,
+    verifiers: vector<address>,
+    amount: u64,
+    is_verified: bool,
+    is_paid: bool,
+}
+
+
+```
+
+### CommunityPool
+
+```
+struct CommunityPool has key, store {
+    id: UID,
+    balance: u64,
+    stakers: vector<address>,
 }
 
 ```
-
-### ReceiverProfile
-
-```
-struct ReceiverProfile has key, store {
-    id: UID,
-    receiver: address,
-    receiverName: vector<u8>,
-    needs: vector<u8>,
-    capacity: u64,
-    receivingTimes: vector<u8>,
-}
+### PolicyCreated
 
 ```
-### ReceiverCap
-
-```
-struct ReceiverCap has key {
-    id: UID,
-    receiverId: ID,
-}
-
-```
-
-```
-### DriverProfile
-
-```
-struct DriverProfile has key, store {
-    id: UID,
-    driver: address,
-    driverName: vector<u8>,
-    vehicleType: vector<u8>,
-    driverRating: u64,
+struct PolicyCreated has copy, drop {
+    owner: address,
+    premium: u64,
+    coverage: u64,
+    conditions: vector<u8>,
 }
 
 ```
 
 ```
-### SurplusRecord
+### ClaimCreated
 
 ```
-struct SurplusRecord has key, store {
-    id: UID,
-    donor: address,
-    receiver: address,
-    proof_of_delivery: vector<u8>,
+struct ClaimCreated has copy, drop {
+    id: ID,
+    policy_id: u64,
 }
 
 ```
 
 ```
-### Assignment
+### ClaimPaid
 
 ```
-struct Assignment has key, store {
-    id: UID,
-    post: SurplusPost,
-    driver: DriverProfile,
-    receiver: ReceiverProfile,
-    wages: u64,
-    pickupLocation: vector<u8>,
-    deliveryLocation: vector<u8>,
+struct ClaimPaid has copy, drop {
+    id: ID,
+    amount: u64,
 }
 
 ```
