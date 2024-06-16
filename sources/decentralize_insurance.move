@@ -47,9 +47,11 @@ module decentralized_insurance::insurance {
         balance: u64,
         stakers: vector<address>,
         // rewards: u64,
+    }
     
     // Events
     struct PolicyCreated has copy, drop { owner: address, premium: u64, coverage: u64, conditions: vector<u8>}
+
     struct ClaimCreated has copy, drop { id: ID, policy_id: u64 }
     // struct ClaimVerified has copy, drop { id: UID, verifier: address }
     struct ClaimPaid has copy, drop { id: ID, amount: u64 }
