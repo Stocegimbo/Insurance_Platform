@@ -1,4 +1,4 @@
-# Decentralized Insurance
+# Decentralized Insurance Platform
 
 ## Overview
 
