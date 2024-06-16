@@ -5,20 +5,18 @@ module decentralized_insurance::insurance {
     use sui::balance::{Self};
     use sui::object::{Self, UID, ID};
     use sui::transfer::{Self};
-    // use sui::clock::Clock;
     use sui::event;
+
     use std::vector;
 
     // Errors Definitions
-    // const INSUFFICIENT_BALANCE: u64 = 1;
-    const CLAIM_NOT_VERIFIED: u64 = 2;
-    // const CLAIM_ALREADY_PAID: u64 = 3;
-    const CLAIMANT_CANNOT_VERIFY: u64 = 4;
-    const VERIFIER_ALREADY_VERIFIED: u64 = 5;
-    const CLAIM_CONDITIONS_NOT_MET: u64 = 6; 
-    const POLICY_IS_ACTIVE: u64 = 7;
-    const INSUFFICIENT_POOL_BALANCE: u64 = 8;
-    const AMOUNT_IS_LESS_THAN_THE_PREMIUM: u64 = 9;
+    const ERROR_CLAIM_NOT_VERIFIED: u64 = 2;
+    const ERROR_CLAIMANT_CANNOT_VERIFY: u64 = 4;
+    const ERROR_VERIFIER_ALREADY_VERIFIED: u64 = 5;
+    const ERROR_CLAIM_CONDITIONS_NOT_MET: u64 = 6; 
+    const ERROR_POLICY_IS_ACTIVE: u64 = 7;
+    const ERROR_INSUFFICIENT_POOL_BALANCE: u64 = 8;
+    const ERROR_AMOUNT_IS_LESS_THAN_THE_PREMIUM: u64 = 9;
     
     // Struct representing an insurance policy
     struct Policy has key, store {
@@ -53,12 +51,8 @@ module decentralized_insurance::insurance {
     struct PolicyCreated has copy, drop { owner: address, premium: u64, coverage: u64, conditions: vector<u8>}
 
     struct ClaimCreated has copy, drop { id: ID, policy_id: u64 }
-    // struct ClaimVerified has copy, drop { id: UID, verifier: address }
+
     struct ClaimPaid has copy, drop { id: ID, amount: u64 }
-    
-    // Module constants
-    // const INITIAL_REWARD: u64 = 1000;
-    // const FLOAT_SCALING: u64 = 1_000_000_000;
     
     // Create a new insurance policy
     public fun create_policy(owner: address, premium: u64, coverage: u64, conditions: vector<u8>, ctx: &mut TxContext): Policy {
@@ -86,8 +80,8 @@ module decentralized_insurance::insurance {
         payment: Coin<SUI>, 
         ctx: &mut TxContext,
         ) {
-        assert!(policy.is_active, POLICY_IS_ACTIVE);
-        assert!(coin::value(&payment) >= policy.premium, AMOUNT_IS_LESS_THAN_THE_PREMIUM);
+        assert!(policy.is_active, ERROR_POLICY_IS_ACTIVE);
+        assert!(coin::value(&payment) >= policy.premium, ERROR_AMOUNT_IS_LESS_THAN_THE_PREMIUM);
         let payer = tx_context::sender(ctx);
         policy.owner = payer;
         policy.is_active = true;
@@ -123,15 +117,15 @@ module decentralized_insurance::insurance {
     // Verify a claim
     public fun verify_claim(claim: &mut Claim, verifier: address) {
         // Ensure the verifier is not the claimant
-        assert!(verifier != claim.claimant, CLAIMANT_CANNOT_VERIFY);
+        assert!(verifier != claim.claimant, ERROR_CLAIMANT_CANNOT_VERIFY);
         
         // Ensure the verifier hasn't already verified this claim
-        assert!(!vector::contains(&claim.verifiers, &verifier), VERIFIER_ALREADY_VERIFIED);
+        assert!(!vector::contains(&claim.verifiers, &verifier), ERROR_VERIFIER_ALREADY_VERIFIED);
         
         // Verify conditions for the claim
         let all_conditions_met = true; 
         
-        assert!(all_conditions_met, CLAIM_CONDITIONS_NOT_MET);
+        assert!(all_conditions_met, ERROR_CLAIM_CONDITIONS_NOT_MET);
         // Add verifier to the list of verifiers
         vector::push_back(&mut claim.verifiers, verifier);
         
@@ -143,14 +137,10 @@ module decentralized_insurance::insurance {
     
     // Pay a verified claim
     public fun pay_claim(claim: &mut Claim, pool: &mut CommunityPool, payment: Coin<SUI>, ctx: &mut TxContext) {
-        assert!(claim.is_verified, CLAIM_NOT_VERIFIED);
-        assert!(pool.balance >= claim.amount, INSUFFICIENT_POOL_BALANCE);
+        assert!(claim.is_verified, ERROR_CLAIM_NOT_VERIFIED);
+        assert!(pool.balance >= claim.amount, ERROR_INSUFFICIENT_POOL_BALANCE);
         claim.is_paid = true;
         transfer::public_transfer(payment, claim.claimant);
-        // event::emit(ClaimPaid { 
-        //     id: claim.id,
-        //     amount: claim.amount 
-        // });
     }
     
     // // Create a community pool
