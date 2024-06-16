@@ -1,8 +1,8 @@
 module decentralized_insurance::insurance {
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
-    use sui::tx_context::{Self, TxContext};
-    use sui::balance::{Self};
+    use sui::tx_context::{Self, TxContext, sender};
+    use sui::balance::{Self, Balance};
     use sui::object::{Self, UID, ID};
     use sui::transfer::{Self};
     use sui::event;
@@ -42,9 +42,17 @@ module decentralized_insurance::insurance {
     // Struct representing a community pool
     struct CommunityPool has key, store {
         id: UID,
-        balance: u64,
+        balance: Balance<SUI>,
+        total_amount: u64,
         stakers: vector<address>,
-        // rewards: u64,
+    }
+
+    struct AdminCap has key {
+        id: UID
+    }
+
+    fun init(ctx: &mut TxContext) {
+        transfer::transfer(AdminCap{id: object::new(ctx)}, sender(ctx));
     }
     
     // Events
@@ -108,9 +116,6 @@ module decentralized_insurance::insurance {
             is_verified: false,
             is_paid: false,
         };
-        // event::emit(ClaimCreated { id: claim_id, policy_id });
-        
-        
         claim
     }
     
@@ -118,17 +123,10 @@ module decentralized_insurance::insurance {
     public fun verify_claim(claim: &mut Claim, verifier: address) {
         // Ensure the verifier is not the claimant
         assert!(verifier != claim.claimant, ERROR_CLAIMANT_CANNOT_VERIFY);
-        
         // Ensure the verifier hasn't already verified this claim
         assert!(!vector::contains(&claim.verifiers, &verifier), ERROR_VERIFIER_ALREADY_VERIFIED);
-        
-        // Verify conditions for the claim
-        let all_conditions_met = true; 
-        
-        assert!(all_conditions_met, ERROR_CLAIM_CONDITIONS_NOT_MET);
         // Add verifier to the list of verifiers
         vector::push_back(&mut claim.verifiers, verifier);
-        
         // If sufficient verifiers have verified, mark the claim as verified
         if (vector::length(&claim.verifiers) > 1) {  // Example: require 2 verifiers
             claim.is_verified = true;
@@ -138,34 +136,27 @@ module decentralized_insurance::insurance {
     // Pay a verified claim
     public fun pay_claim(claim: &mut Claim, pool: &mut CommunityPool, payment: Coin<SUI>, ctx: &mut TxContext) {
         assert!(claim.is_verified, ERROR_CLAIM_NOT_VERIFIED);
-        assert!(pool.balance >= claim.amount, ERROR_INSUFFICIENT_POOL_BALANCE);
+        assert!(pool.total_amount >= claim.amount, ERROR_INSUFFICIENT_POOL_BALANCE);
         claim.is_paid = true;
         transfer::public_transfer(payment, claim.claimant);
     }
     
-    // // Create a community pool
-    // public fun create_community_pool(ctx: &mut TxContext): CommunityPool {
-    //     let pool_id = object::newcoin: Coin<SUI>(ctx);
-    //     CommunityPool {
-    //         id: pool_id,
-    //         balance: 0,
-    //         stakers: vector::empty<address>(),
-    //         rewards: INITIAL_REWARD,
-    //     }
-    // }
+    // Create a community pool
+    public fun new_pool(_:&AdminCap, ctx: &mut TxContext) {
+        transfer::share_object(CommunityPool {
+            id: object::new(ctx),
+            balance: balance::zero(),
+            total_amount: 0,
+            stakers: vector::empty<address>(),
+        })
+    }
     
     // Stake tokens in a community pool
-    public fun stake(pool: &mut CommunityPool, staker: address, amount: u64, ctx: &mut TxContext) {
-        // pool.balance += amount;
-        vector::push_back(&mut pool.stakers, staker);
+    public fun stake(pool: &mut CommunityPool, coin: Coin<SUI>, ctx: &mut TxContext) {
+        pool.total_amount = pool.total_amount + coin::value(&coin);
+        coin::put(&mut pool.balance, coin);
+        if(!vector::contains(&pool.stakers, &sender(ctx))) {
+            vector::push_back(&mut pool.stakers, sender(ctx));
+        };
     }
-
-//     // Reward stakers based on pool performance
-//     public fun reward_stakers(pool: &mut CommunityPool, ctx: &mut TxContext) {
-//         let num_stakers = vector::length(&pool.stakers);
-//         let reward_per_staker = pool.rewards / num_stakers;
-//         for staker in &pool.stakers {
-//             transfer::public_transfer(coin::new(reward_per_staker, ctx), *staker);
-//         }
-//     }
 }
