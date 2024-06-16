@@ -87,6 +87,14 @@ module decentralized_insurance::insurance {
         });
         policy
     }
+
+    public fun new_account(ctx: &mut TxContext) : Account {
+        Account {
+            id: object::new(ctx),
+            owner: sender(ctx),
+            balance: 0
+        }
+    }
     
     // Pay premium for an insurance policy
     public fun pay_premium(
