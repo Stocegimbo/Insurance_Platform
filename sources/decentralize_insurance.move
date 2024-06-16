@@ -47,6 +47,12 @@ module decentralized_insurance::insurance {
         stakers: vector<address>,
     }
 
+    struct Account has key, store {
+        id: UID,
+        owner: address,
+        balance: u64
+    }
+
     struct AdminCap has key {
         id: UID
     }
@@ -152,11 +158,21 @@ module decentralized_insurance::insurance {
     }
     
     // Stake tokens in a community pool
-    public fun stake(pool: &mut CommunityPool, coin: Coin<SUI>, ctx: &mut TxContext) {
-        pool.total_amount = pool.total_amount + coin::value(&coin);
+    public fun stake(pool: &mut CommunityPool, acc: &mut Account, coin: Coin<SUI>, ctx: &mut TxContext) {
+        let deposit = coin::value(&coin);
+        pool.total_amount = pool.total_amount + deposit;
+        acc.balance = acc.balance + deposit;
         coin::put(&mut pool.balance, coin);
         if(!vector::contains(&pool.stakers, &sender(ctx))) {
             vector::push_back(&mut pool.stakers, sender(ctx));
         };
+    }
+
+    public fun withdraw(pool: &mut CommunityPool, acc: &mut Account, amount: u64, ctx: &mut TxContext) : Coin<SUI> {
+        assert!(acc.balance >= amount, ERROR_INSUFFICIENT_POOL_BALANCE);
+        let coin = coin::take(&mut pool.balance, amount, ctx);
+        pool.total_amount = pool.total_amount - amount;
+        acc.balance = acc.balance - amount;
+        coin
     }
 }
