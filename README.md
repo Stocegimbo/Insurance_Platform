@@ -1,31 +1,30 @@
-# Food Share Chain
+# Decentralized Insurance
 
 ## Overview
 
-The `food_share::food_share` module on the Sui blockchain platform is designed to facilitate the sharing and distribution of surplus food through a decentralized network. This module allows donors to post surplus food, receivers to claim and assign deliveries, drivers to accept and deliver, and manage payments and disputes efficiently.
+The `decentralized_insurance` module on the Sui blockchain platform is designed to facilitate decentralized insurance policies, claims, and community pooling. This module allows users to create insurance policies, pay premiums, file claims, and manage community pools efficiently and transparently.
 
 ## Table of Contents
 
-- [Food Share Chain](#food-share-chain)
+- [Decentralized Insurance Module](#decentralized-insurance-module)
   - [Overview](#overview)
   - [Table of Contents](#table-of-contents)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-  - [Prerequisites](#prerequisites-1)
-  - [Installation](#installation-1)
-  - [Run a local network](#run-a-local-network)
-  - [Configure connectivity to a local node](#configure-connectivity-to-a-local-node)
-    - [Create addresses](#create-addresses)
-    - [Get localnet SUI tokens](#get-localnet-sui-tokens)
-  - [Build and publish a smart contract](#build-and-publish-a-smart-contract)
-    - [Build package](#build-package)
-    - [Publish package](#publish-package)
+  - [Run a Local Network](#run-a-local-network)
+  - [Configure Connectivity to a Local Node](#configure-connectivity-to-a-local-node)
+    - [Create Addresses](#create-addresses)
+    - [Get Localnet SUI Tokens](#get-localnet-sui-tokens)
+  - [Build and Publish a Smart Contract](#build-and-publish-a-smart-contract)
+    - [Build Package](#build-package)
+    - [Publish Package](#publish-package)
   - [Structs](#structs)
-    - [SurplusPost](#surpluspost)
-    - [DonorProfile](#donorprofile)
-    - [ReceiverProfile](#receiverprofile)
-    - [ReceiverCap](#receivercap)
-    - [SurplusRecord](#surplusrecord)
+    - [Policy](#policy)
+    - [Claim](#claim)
+    - [CommunityPool](#communitypool)
+    - [PolicyCreated](#policycreated)
+    - [ClaimCreated](#claimcreated)
+    - [ClaimPaid](#claimpaid)
 
 ## Prerequisites
 
@@ -50,7 +49,7 @@ The `food_share::food_share` module on the Sui blockchain platform is designed t
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/warrenshiv/food-share-chain.git
+   git clone https://github.com/yourusername/decentralized_insurance.git
    ```
 
 ## Prerequisites
