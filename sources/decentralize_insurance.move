@@ -13,7 +13,7 @@ module decentralized_insurance::insurance {
     const ERROR_CLAIM_NOT_VERIFIED: u64 = 2;
     const ERROR_CLAIMANT_CANNOT_VERIFY: u64 = 4;
     const ERROR_VERIFIER_ALREADY_VERIFIED: u64 = 5;
-    // const ERROR_CLAIM_CONDITIONS_NOT_MET: u64 = 6; 
+    const ERROR_POLICY_IS_NOT_ACTIVE: u64 = 6;
     const ERROR_POLICY_IS_ACTIVE: u64 = 7;
     const ERROR_INSUFFICIENT_POOL_BALANCE: u64 = 8;
     const ERROR_AMOUNT_IS_LESS_THAN_THE_PREMIUM: u64 = 9;
@@ -31,7 +31,7 @@ module decentralized_insurance::insurance {
     // Struct representing a claim
     struct Claim has key, store {
         id: UID,
-        policy_id: u64,
+        policy_id: UID,
         claimant: address,
         verifiers: vector<address>,
         amount: u64,
@@ -63,11 +63,13 @@ module decentralized_insurance::insurance {
     
     // Events
     struct PolicyCreated has copy, drop { owner: address, premium: u64, coverage: u64, conditions: vector<u8>}
+    struct ClaimCreated has copy, drop { id: UID, policy_id: UID, claimant: address, amount: u64 }
+    struct ClaimVerified has copy, drop { id: UID, verifier: address }
+    struct ClaimPaid has copy, drop { id: UID, amount: u64, claimant: address }
+    struct PremiumPaid has copy, drop { policy_id: UID, payer: address, amount: u64 }
+    struct PoolStaked has copy, drop { pool_id: UID, staker: address, amount: u64 }
+    struct PoolWithdrawn has copy, drop { pool_id: UID, staker: address, amount: u64 }
 
-    // struct ClaimCreated has copy, drop { id: ID, policy_id: u64 }
-    
-    // struct ClaimPaid has copy, drop { id: ID, amount: u64 }
-    
     // Create a new insurance policy
     public fun create_policy(owner: address, premium: u64, coverage: u64, conditions: vector<u8>, ctx: &mut TxContext): Policy {
         let policy_id = object::new(ctx);
@@ -105,21 +107,18 @@ module decentralized_insurance::insurance {
         assert!(policy.is_active, ERROR_POLICY_IS_ACTIVE);
         assert!(coin::value(&payment) >= policy.premium, ERROR_AMOUNT_IS_LESS_THAN_THE_PREMIUM);
         let payer = tx_context::sender(ctx);
-        policy.owner = payer;
-        policy.is_active = true;
         
         transfer::public_transfer(payment, policy.owner);
-        
-        event::emit(PolicyCreated { 
-            owner: payer,
-            premium: policy.premium,
-            coverage: policy.coverage,
-            conditions: policy.conditions,
+
+        event::emit(PremiumPaid {
+            policy_id: policy.id,
+            payer,
+            amount: policy.premium,
         });
     }
     
     // Create a new claim
-    public fun create_claim(policy_id: u64, claimant: address, amount: u64, ctx: &mut TxContext): Claim {
+    public fun create_claim(policy_id: UID, claimant: address, amount: u64, ctx: &mut TxContext): Claim {
         let claim_id = object::new(ctx);
         let claim = Claim {
             id: claim_id,
@@ -130,6 +129,12 @@ module decentralized_insurance::insurance {
             is_verified: false,
             is_paid: false,
         };
+        event::emit(ClaimCreated {
+            id: claim_id,
+            policy_id,
+            claimant,
+            amount,
+        });
         claim
     }
     
@@ -145,14 +150,24 @@ module decentralized_insurance::insurance {
         if (vector::length(&claim.verifiers) > 1) {  // Example: require 2 verifiers
             claim.is_verified = true;
         };
+        event::emit(ClaimVerified {
+            id: claim.id,
+            verifier,
+        });
     }
     
     // Pay a verified claim
-    public fun pay_claim(claim: &mut Claim, pool: &mut CommunityPool, payment: Coin<SUI>) {
+    public fun pay_claim(claim: &mut Claim, pool: &mut CommunityPool, ctx: &mut TxContext) {
         assert!(claim.is_verified, ERROR_CLAIM_NOT_VERIFIED);
         assert!(pool.total_amount >= claim.amount, ERROR_INSUFFICIENT_POOL_BALANCE);
         claim.is_paid = true;
+        let payment = coin::take(&mut pool.balance, claim.amount, ctx);
         transfer::public_transfer(payment, claim.claimant);
+        event::emit(ClaimPaid {
+            id: claim.id,
+            amount: claim.amount,
+            claimant: claim.claimant,
+        });
     }
     
     // Create a community pool
@@ -171,9 +186,14 @@ module decentralized_insurance::insurance {
         pool.total_amount = pool.total_amount + deposit;
         acc.balance = acc.balance + deposit;
         coin::put(&mut pool.balance, coin);
-        if(!vector::contains(&pool.stakers, &sender(ctx))) {
+        if (!vector::contains(&pool.stakers, &sender(ctx))) {
             vector::push_back(&mut pool.stakers, sender(ctx));
-        };
+        }
+        event::emit(PoolStaked {
+            pool_id: pool.id,
+            staker: sender(ctx),
+            amount: deposit,
+        });
     }
 
     public fun withdraw(pool: &mut CommunityPool, acc: &mut Account, amount: u64, ctx: &mut TxContext) : Coin<SUI> {
@@ -181,6 +201,11 @@ module decentralized_insurance::insurance {
         let coin = coin::take(&mut pool.balance, amount, ctx);
         pool.total_amount = pool.total_amount - amount;
         acc.balance = acc.balance - amount;
+        event::emit(PoolWithdrawn {
+            pool_id: pool.id,
+            staker: sender(ctx),
+            amount,
+        });
         coin
     }
 }
